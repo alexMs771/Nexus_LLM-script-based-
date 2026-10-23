@@ -1,0 +1,109 @@
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
+
+
+IntentName = Literal[
+    "IN_SCOPE",
+    "NEEDS_CLARIFICATION",
+    "UNSUPPORTED_SQL_OPERATION",
+    "OUT_OF_SCOPE",
+    "RESTRICTED_OR_DESTRUCTIVE",
+]
+DialectName = Literal["postgresql", "sqlite", "mysql", "dbml"]
+ModelName = Literal["scratch", "ollama"]
+
+
+class HealthResponse(BaseModel):
+    status: str
+    model: str
+    loaded_models: list[str]
+    version: str = "1.0.0"
+
+
+class ModelInfo(BaseModel):
+    id: str
+    provider: str
+    available: bool
+    version: str = ""
+    details: str = ""
+
+
+class IntentRequest(BaseModel):
+    requirement: str = Field(min_length=1, max_length=4000)
+
+
+class IntentResponse(BaseModel):
+    status: Literal["accepted", "clarification_required", "rejected"]
+    intent: IntentName
+    code: str
+    message: str
+    confidence: float
+    matched_signals: list[str] = []
+
+
+class DDLGenerationRequest(BaseModel):
+    requirement: str = Field(min_length=1, max_length=4000)
+    # Omitted dialect is resolved from the request; PostgreSQL is the fallback.
+    dialect: DialectName | None = None
+    model: ModelName | None = None
+    task: Literal["generate_ddl", "explain_ddl", "modify_ddl"] = "generate_ddl"
+    schema_context: str = Field(default="", max_length=12000)
+    max_new_tokens: int = Field(default=192, ge=8, le=512)
+    request_id: str | None = Field(default=None, max_length=100)
+
+
+class DDLValidationRequest(BaseModel):
+    sql: str = Field(min_length=1, max_length=20000)
+    dialect: DialectName = "postgresql"
+    schema_context: str = Field(default="", max_length=12000)
+    allow_destructive: bool = False
+
+
+class DDLConvertRequest(BaseModel):
+    sql: str = Field(min_length=1, max_length=20000)
+    source_dialect: DialectName = "postgresql"
+    target_dialect: DialectName = "postgresql"
+
+
+class DDLExplainRequest(BaseModel):
+    sql: str | None = Field(default=None, max_length=20000)
+    requirement: str | None = Field(default=None, max_length=4000)
+    dialect: DialectName = "postgresql"
+
+
+class GenerationResponse(BaseModel):
+    status: Literal["accepted", "clarification_required", "rejected", "validation_failed"]
+    code: str
+    intent: IntentName
+    generated_ddl: str | None = None
+    sql: str | None = None
+    explanation: str = ""
+    dialect: DialectName
+    referenced_objects: list[str] = []
+    validation_status: Literal["valid", "invalid", "not_run"]
+    warnings: list[str] = []
+    model_id: str | None = None
+    model_version: str | None = None
+    request_id: str
+    latency_ms: float
+    message: str = ""
+    metadata: dict[str, Any] = {}
+
+
+class SQLGenerationRequest(DDLGenerationRequest):
+    """Backward-compatible alias for the original endpoint."""
+    requirement: str = Field(min_length=5, max_length=4000)
+    model: Literal["scratch", "ollama"] = "scratch"
+
+
+class SQLGenerationResponse(BaseModel):
+    model: str
+    sql: str | None = None
+    explanation: str = ""
+    valid_syntax: bool
+    warnings: list[str]
+    status: str = "accepted"
+    intent: IntentName = "IN_SCOPE"
+    code: str = "IN_SCOPE"
+    request_id: str = ""
