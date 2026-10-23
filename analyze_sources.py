@@ -172,6 +172,32 @@ def analyze_postgres_sample_dbs(base_dir: Path) -> dict:
     }
 
 
+def analyze_mysql_sample_dbs(base_dir: Path) -> dict:
+    if not base_dir.exists():
+        return {"status": "not_found"}
+    sql_files = list(base_dir.glob("*.sql"))
+    total_bytes = sum(f.stat().st_size for f in sql_files)
+    return {
+        "databases": [f.stem for f in sql_files],
+        "total_sql_files": len(sql_files),
+        "size_mb": round(total_bytes / (1024 * 1024), 2),
+        "status": "ready",
+    }
+
+
+def analyze_sqlite_sample_dbs(base_dir: Path) -> dict:
+    if not base_dir.exists():
+        return {"status": "not_found"}
+    files = list(base_dir.glob("*.sql")) + list(base_dir.glob("*.db")) + list(base_dir.glob("*.sqlite"))
+    total_bytes = sum(f.stat().st_size for f in files)
+    return {
+        "databases": [f.name for f in files],
+        "total_database_files": len(files),
+        "size_mb": round(total_bytes / (1024 * 1024), 2),
+        "status": "ready",
+    }
+
+
 def analyze_dbml_repo(base_dir: Path) -> dict:
     if not base_dir.exists():
         return {"status": "not_found"}
@@ -214,6 +240,8 @@ def main():
     analysis = {
         "database_docs": analyze_database_docs(root / "database_docs"),
         "postgres_sample_dbs": analyze_postgres_sample_dbs(root / "sample_databases" / "postgres-sample-dbs"),
+        "mysql_sample_dbs": analyze_mysql_sample_dbs(root / "sample_databases" / "mysql"),
+        "sqlite_sample_dbs": analyze_sqlite_sample_dbs(root / "sample_databases" / "sqlite"),
         "dbml_repository": analyze_dbml_repo(root / "database_docs" / "dbml_repository"),
         "bird_mini_dev": analyze_bird_mini_dev(root / "bird_mini_dev"),
         "sqale_full": analyze_sqale_full(root / "sqale_full"),

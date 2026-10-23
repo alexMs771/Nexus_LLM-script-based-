@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     allow_destructive: bool = False
     retry_invalid_generation: bool = False
     data_dir: Path = ROOT_DIR / "data"
+    session_db_path: Path = ROOT_DIR / "artifacts" / "sessions.sqlite3"
 
 
 settings = Settings()

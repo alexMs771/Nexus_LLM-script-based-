@@ -11,7 +11,7 @@ from training.intent_classifier import INTENT_LABELS, IntentClassifier
 
 
 _DDL_ACTION = re.compile(
-    r"\b(create|generate|make|build|set\s+up|define|add|alter|modify|rename|remove|change)\b"
+    r"\b(create|generate|make|build|set\s+up|define|design|need|want|require|add|alter|modify|rename|remove|change)\b"
     r"[\w\s,.'\-_]{0,120}\b(table|tables|schema|schemas|column|columns|index|indexes|indices|view|views|constraint|constraints|primary\s+key|foreign\s+key|unique|check)\b",
     re.IGNORECASE,
 )
@@ -29,7 +29,7 @@ _RESTRICTED = re.compile(
     re.IGNORECASE,
 )
 _GENERIC = re.compile(
-    r"^\s*(?:please\s+)?(?:create|make|build|generate|set\s+up|define|add|alter|modify|rename|remove)\s+"
+    r"^\s*(?:please\s+)?(?:(?:i|we)\s+)?(?:create|make|build|generate|set\s+up|define|design|need|want|require|give\s+me)\s+"
     r"(?:a|an|the|new)?\s*(?:database\s+)?(?:table|schema|index|view|column|constraint)s?\s*\.?\s*$",
     re.IGNORECASE,
 )

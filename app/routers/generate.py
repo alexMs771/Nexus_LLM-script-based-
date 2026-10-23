@@ -16,6 +16,7 @@ from app.schemas import (
 )
 from app.services.model_router import model_inventory
 from app.services.request_engine import classify_payload, generate_ddl
+from app.services.session_store import delete_session, get_session
 from app.services.validator import convert_sql, validate_sql
 
 def _auth(x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> None:
@@ -92,6 +93,28 @@ def models():
     return {"models": model_inventory(), "default_model": settings.default_model}
 
 
+@router.get("/api/v1/sessions/{session_id}")
+def session(session_id: str):
+    try:
+        state = get_session(session_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if state is None:
+        raise HTTPException(status_code=404, detail="Session not found.")
+    return state
+
+
+@router.delete("/api/v1/sessions/{session_id}")
+def clear_session(session_id: str):
+    try:
+        deleted = delete_session(session_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Session not found.")
+    return {"status": "deleted", "session_id": session_id}
+
+
 @router.post("/generate", response_model=SQLGenerationResponse)
 def legacy_generate(payload: SQLGenerationRequest):
     result = generate_ddl(payload, legacy=True)
@@ -105,4 +128,5 @@ def legacy_generate(payload: SQLGenerationRequest):
         intent=result["intent"],
         code=result["code"],
         request_id=result["request_id"],
+        session_id=result.get("session_id"),
     )

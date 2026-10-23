@@ -8,6 +8,7 @@ def test_scope_gate_distinguishes_python_boundary_cases():
 
 def test_scope_gate_requires_details_for_generic_table_request():
     assert classify_request("Create a table.").intent == "NEEDS_CLARIFICATION"
+    assert classify_request("I need a table").intent == "NEEDS_CLARIFICATION"
 
 
 def test_scope_gate_blocks_destructive_request():

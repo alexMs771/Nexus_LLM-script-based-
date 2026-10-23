@@ -51,6 +51,7 @@ class DDLGenerationRequest(BaseModel):
     schema_context: str = Field(default="", max_length=12000)
     max_new_tokens: int = Field(default=192, ge=8, le=512)
     request_id: str | None = Field(default=None, max_length=100)
+    session_id: str | None = Field(default=None, max_length=100, pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$")
 
 
 class DDLValidationRequest(BaseModel):
@@ -72,6 +73,20 @@ class DDLExplainRequest(BaseModel):
     dialect: DialectName = "postgresql"
 
 
+class StructuredGenerationResult(BaseModel):
+    """Compact, stable result view for clients such as Postman and frontends."""
+
+    operation: str
+    object_type: str
+    name: str | None = None
+    dialect: DialectName
+    ddl: str | None = None
+    columns: list[Any] = Field(default_factory=list)
+    relationships: list[dict[str, Any]] = Field(default_factory=list)
+    validation: dict[str, Any] = Field(default_factory=dict)
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
 class GenerationResponse(BaseModel):
     status: Literal["accepted", "clarification_required", "rejected", "validation_failed"]
     code: str
@@ -88,7 +103,10 @@ class GenerationResponse(BaseModel):
     request_id: str
     latency_ms: float
     message: str = ""
-    metadata: dict[str, Any] = {}
+    session_id: str | None = None
+    conversation_turn: int = 0
+    result: StructuredGenerationResult | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class SQLGenerationRequest(DDLGenerationRequest):
@@ -107,3 +125,4 @@ class SQLGenerationResponse(BaseModel):
     intent: IntentName = "IN_SCOPE"
     code: str = "IN_SCOPE"
     request_id: str = ""
+    session_id: str | None = None

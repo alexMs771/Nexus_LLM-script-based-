@@ -14,11 +14,11 @@ def test_health_endpoint_reports_not_loaded_without_artifacts():
     assert payload["loaded_models"] == []
 
 
-def test_generate_returns_503_when_scratch_model_is_missing():
+def test_advanced_generate_returns_503_when_scratch_model_is_missing():
     response = client.post(
         "/generate",
         json={
-            "requirement": "Create a table for students with an ID and name.",
+            "requirement": "Alter the students table and add a graduation_year column.",
             "dialect": "postgresql",
             "task": "generate_ddl",
             "model": "scratch",
