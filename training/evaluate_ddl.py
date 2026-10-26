@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import time
 
+import torch
 import sqlglot
 
 from app.models.scratch_model import ScratchSQLModel
@@ -35,6 +36,11 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--max-new-tokens", type=int, default=256)
+    parser.add_argument("--candidates", type=int, default=1, help="Generate multiple candidates and select the first valid DDL.")
+    parser.add_argument("--temperature", type=float, default=0.25)
+    parser.add_argument("--repetition-penalty", type=float, default=1.04)
+    parser.add_argument("--no-repeat-ngram-size", type=int, default=6)
+    parser.add_argument("--top-k", type=int, default=0)
     args = parser.parse_args()
     model = ScratchSQLModel.from_dir(args.model_dir)
     total = syntax = exact = 0
@@ -47,11 +53,32 @@ def main() -> None:
                 continue
             row = json.loads(line)
             dialect = str(row.get("dialect") or "postgresql")
-            generated = model.generate(
-                build_ddl_prompt(row.get("question", ""), dialect, row.get("operation", "generate_ddl"), row.get("schema_context", "")),
-                max_new_tokens=args.max_new_tokens,
+            prompt = build_ddl_prompt(row.get("question", ""), dialect, row.get("operation", "generate_ddl"), row.get("schema_context", ""))
+            candidates: list[tuple[str, object]] = []
+            for candidate_index in range(max(1, args.candidates)):
+                # A deterministic seed makes repeated evaluation comparable,
+                # while allowing optional stochastic candidates to explore
+                # alternatives from the learned distribution.
+                torch.manual_seed(1009 + total * 31 + candidate_index)
+                generated_candidate = model.generate(
+                    prompt,
+                    max_new_tokens=args.max_new_tokens,
+                    temperature=0.0 if candidate_index == 0 else args.temperature,
+                    repetition_penalty=args.repetition_penalty,
+                    no_repeat_ngram_size=args.no_repeat_ngram_size,
+                    top_k=args.top_k,
+                )
+                candidate_result = validate_sql(
+                    generated_candidate,
+                    dialect,
+                    allow_destructive=False,
+                    schema_context=row.get("schema_context", ""),
+                )
+                candidates.append((generated_candidate, candidate_result))
+            generated, result = next(
+                ((candidate, candidate_result) for candidate, candidate_result in candidates if candidate_result.valid_syntax and candidate_result.policy_allowed),
+                candidates[0],
             )
-            result = validate_sql(generated, dialect, allow_destructive=False, schema_context=row.get("schema_context", ""))
             operation = str(row.get("operation", "unknown"))
             is_syntax = bool(result.valid_syntax and result.policy_allowed)
             is_exact = _normal(generated, dialect) == _normal(str(row.get("target_sql", "")), dialect)
@@ -62,7 +89,7 @@ def main() -> None:
             by_operation[operation]["syntax_valid"] += int(is_syntax)
             by_operation[operation]["exact_match"] += int(is_exact)
             if len(failures) < 20 and (not is_syntax or not is_exact):
-                failures.append({"question": row.get("question", ""), "expected_sql": row.get("target_sql", ""), "generated_sql": generated, "warnings": result.warnings})
+                failures.append({"question": row.get("question", ""), "expected_sql": row.get("target_sql", ""), "generated_sql": generated, "warnings": result.warnings, "candidate_count": len(candidates)})
             if args.limit and total >= args.limit:
                 break
     report = {
@@ -71,6 +98,13 @@ def main() -> None:
         "total": total,
         "syntax_accuracy": syntax / max(total, 1),
         "exact_match_accuracy": exact / max(total, 1),
+        "candidate_count": max(1, args.candidates),
+        "decoding": {
+            "temperature": args.temperature,
+            "repetition_penalty": args.repetition_penalty,
+            "no_repeat_ngram_size": args.no_repeat_ngram_size,
+            "top_k": args.top_k,
+        },
         "execution_accuracy": None,
         "execution_accuracy_note": "Not claimed until generated DDL is executed in disposable databases.",
         "latency_ms_per_example": (time.perf_counter() - started) * 1000 / max(total, 1),

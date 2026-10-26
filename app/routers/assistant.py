@@ -29,6 +29,17 @@ def _summary_text(objects: list[str], sql: str | None, status: str) -> str:
     return f"{status}. No DDL was generated."
 
 
+def _compact_warnings(warnings: list[str] | None) -> list[str]:
+    """Keep diagnostics useful without returning parser dumps to clients."""
+    compact: list[str] = []
+    for warning in warnings or []:
+        cleaned = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", str(warning))
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        if cleaned and cleaned not in compact:
+            compact.append(cleaned[:240] + ("…" if len(cleaned) > 240 else ""))
+    return compact[:2]
+
+
 def _base_response(*, status: str, code: str, intent: str, dialect: str, model: str, request_id: str, latency_ms: float, message: str, sql: str | None = None, objects: list[str] | None = None, validation: dict | None = None, warnings: list[str] | None = None, version: str | None = None) -> AssistantResponseData:
     return AssistantResponseData(
         status=status,
@@ -39,7 +50,7 @@ def _base_response(*, status: str, code: str, intent: str, dialect: str, model: 
         operation="DDL" if sql else None,
         object_names=objects or [],
         validation=validation or {},
-        warnings=warnings or [],
+        warnings=_compact_warnings(warnings),
         message=message,
         model=model,
         model_version=version,
@@ -89,8 +100,6 @@ def generate_assistant(payload: AssistantRequest) -> AssistantEnvelope:
                 memory_used=context.memory_used,
                 remember=_summary_text([], None, message),
                 active_objects=context.table_names,
-                previous_prompt=context.previous_requirement,
-                resolved_prompt=resolved_prompt,
             ),
         )
 
@@ -132,7 +141,7 @@ def generate_assistant(payload: AssistantRequest) -> AssistantEnvelope:
         # diagnostics, while clients receive a stable nullable SQL field.
         sql=result.sql if result.valid_syntax and result.policy_allowed else None,
         objects=result.referenced_objects,
-        validation={"status": result.validation_status, "syntax_valid": result.valid_syntax, "policy_allowed": result.policy_allowed, "statement_types": result.statement_types},
+        validation={"status": result.validation_status, "syntax_valid": result.valid_syntax, "policy_allowed": result.policy_allowed},
         warnings=result.warnings,
         version=version,
     )
@@ -150,13 +159,11 @@ def generate_assistant(payload: AssistantRequest) -> AssistantEnvelope:
         response=response,
         summary=AssistantSummary(
             session_id=session_id,
-            turn=turn,
-            memory_used=context.memory_used,
-            remember=_summary_text(result.referenced_objects, result.sql, status),
-            active_objects=result.referenced_objects or context.table_names,
-            previous_prompt=context.previous_requirement,
-            resolved_prompt=resolved_prompt,
-        ),
+                turn=turn,
+                memory_used=context.memory_used,
+                remember=_summary_text(result.referenced_objects, result.sql, status),
+                active_objects=result.referenced_objects or context.table_names,
+            ),
     )
 
 

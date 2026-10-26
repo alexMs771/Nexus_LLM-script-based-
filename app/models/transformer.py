@@ -109,12 +109,41 @@ class SQLTransformer(nn.Module):
         eos_id: int,
         pad_id: int,
         temperature: float = 1.0,
+        repetition_penalty: float = 1.0,
+        no_repeat_ngram_size: int = 0,
+        top_k: int = 0,
     ) -> torch.Tensor:
         self.eval()
         tokens = input_ids
         for _ in range(max_new_tokens):
             context = tokens[:, -self.max_len :]
             logits = self(context)[:, -1, :]
+            if repetition_penalty > 1.0:
+                # Penalize tokens already present in the current sequence.  This
+                # is a model-agnostic decoding control; it does not synthesize
+                # SQL or impose a hard-coded response template.
+                for batch_index in range(logits.size(0)):
+                    seen = torch.unique(tokens[batch_index])
+                    values = logits[batch_index, seen]
+                    logits[batch_index, seen] = torch.where(
+                        values < 0,
+                        values * repetition_penalty,
+                        values / repetition_penalty,
+                    )
+            if no_repeat_ngram_size > 1 and tokens.size(1) >= no_repeat_ngram_size - 1:
+                prefix = tokens[:, -(no_repeat_ngram_size - 1) :]
+                for batch_index in range(tokens.size(0)):
+                    history = tokens[batch_index].tolist()
+                    prefix_values = prefix[batch_index].tolist()
+                    blocked: set[int] = set()
+                    for index in range(len(history) - no_repeat_ngram_size + 1):
+                        if history[index : index + no_repeat_ngram_size - 1] == prefix_values:
+                            blocked.add(history[index + no_repeat_ngram_size - 1])
+                    if blocked:
+                        logits[batch_index, list(blocked)] = float("-inf")
+            if top_k > 0 and top_k < logits.size(-1):
+                cutoff = torch.topk(logits, top_k, dim=-1).values[:, -1].unsqueeze(-1)
+                logits = logits.masked_fill(logits < cutoff, float("-inf"))
             if temperature <= 0:
                 next_id = torch.argmax(logits, dim=-1, keepdim=True)
             else:

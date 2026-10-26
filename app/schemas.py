@@ -170,6 +170,8 @@ class AssistantRequest(BaseModel):
 
 
 class AssistantResponseData(BaseModel):
+    """Compact public response for the learned assistant endpoint."""
+
     status: Literal["accepted", "clarification_required", "rejected", "validation_failed"]
     code: str
     intent: IntentName
@@ -181,19 +183,16 @@ class AssistantResponseData(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     message: str = ""
     model: str
-    model_version: str | None = None
-    request_id: str
-    latency_ms: float
 
 
 class AssistantSummary(BaseModel):
+    """Minimal conversational state exposed to clients."""
+
     session_id: str
     turn: int
     memory_used: bool
     remember: str
     active_objects: list[str] = Field(default_factory=list)
-    previous_prompt: str = ""
-    resolved_prompt: str = ""
 
 
 class AssistantEnvelope(BaseModel):

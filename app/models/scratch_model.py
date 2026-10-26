@@ -48,7 +48,15 @@ class ScratchSQLModel:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         return cls(model=model, tokenizer=tokenizer, device=device, version=config.get("model_version", ""))
 
-    def generate(self, prompt: str, max_new_tokens: int = 256, temperature: float = 0.0) -> str:
+    def generate(
+        self,
+        prompt: str,
+        max_new_tokens: int = 256,
+        temperature: float = 0.0,
+        repetition_penalty: float = 1.04,
+        no_repeat_ngram_size: int = 6,
+        top_k: int = 0,
+    ) -> str:
         encoded = self.tokenizer.encode(prompt, add_special=True)
         if encoded and encoded[-1] == self.tokenizer.eos_id:
             encoded = encoded[:-1]
@@ -59,6 +67,9 @@ class ScratchSQLModel:
             eos_id=self.tokenizer.eos_id,
             pad_id=self.tokenizer.pad_id,
             temperature=temperature,
+            repetition_penalty=repetition_penalty,
+            no_repeat_ngram_size=no_repeat_ngram_size,
+            top_k=top_k,
         )
         new_tokens = output_ids[0, input_ids.size(1) :].tolist()
         return self.tokenizer.decode(new_tokens)
