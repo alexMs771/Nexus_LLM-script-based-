@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 import sys
 import time
@@ -325,9 +326,11 @@ def generate(payload: GenerateRequest) -> dict:
 
 
 def main() -> None:
+    default_host = os.environ.get("HOST", "0.0.0.0")
+    default_port = int(os.environ.get("PORT", "8001"))
     parser = argparse.ArgumentParser(description="Run the hardcoded prototype API and Web UI server.")
-    parser.add_argument("--host", default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
-    parser.add_argument("--port", type=int, default=8001, help="Port to bind (default: 8001)")
+    parser.add_argument("--host", default=default_host, help=f"Host to bind (default: {default_host})")
+    parser.add_argument("--port", type=int, default=default_port, help=f"Port to bind (default: {default_port})")
     args = parser.parse_args()
 
     print(f"\n" + "=" * 65)

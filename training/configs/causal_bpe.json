@@ -4,12 +4,12 @@
     "n_heads": 4,
     "n_layers": 4,
     "d_ff": 512,
-    "max_len": 256,
+    "max_len": 128,
     "dropout": 0.1
   },
   "tokenizer": {
     "kind": "byte_bpe",
-    "vocab_size": 512,
+    "vocab_size": 300,
     "text_limit": 1000,
     "byte_limit": 250000
   },
@@ -19,8 +19,8 @@
     "grad_accumulation": 1,
     "learning_rate": 0.0003,
     "weight_decay": 0.01,
-    "epochs": 4,
-    "max_steps": 1000,
+    "epochs": 3,
+    "max_steps": 300,
     "eval_every": 100,
     "save_every": 100
   }

@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: sql-ddl-prototype
+    env: python
+    buildCommand: pip install -r requirements-demo.txt
+    startCommand: python hardcoded_backup/serve.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0

@@ -1,9 +1,9 @@
-"""Expand the accepted DDL training split with deterministic paraphrases.
+"""Expand the accepted DDL training split with supervised schema examples.
 
-This changes only the supervised training split.  It does not invent a
-runtime rule engine: every augmented row keeps the original learned target
-and is used only to teach the Transformer common request wording and the
-project's explicit default-primary-key convention.
+This changes only the supervised training split.  It does not add a serving
+rule engine.  The extra records are derived from real schema contexts already
+present in the prepared corpora and are used to teach the Transformer how a
+natural request maps to a concrete DDL target.
 """
 
 from __future__ import annotations
@@ -13,7 +13,11 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import random
 import re
+
+import sqlglot
+from sqlglot import exp
 
 from app.config import ROOT_DIR
 from training.dataset import read_jsonl
@@ -92,7 +96,40 @@ def _default_table_rows(row: dict) -> list[dict]:
     return rows
 
 
-def _schema_copy_rows(limit: int) -> list[dict]:
+def _schema_table_name(schema: str) -> str:
+    match = _CREATE_TABLE.search(schema)
+    return match.group(1) if match else "the requested table"
+
+
+def _schema_natural_description(schema: str) -> tuple[str, str] | None:
+    """Return a natural table/column description for a simple real schema."""
+    try:
+        statements = sqlglot.parse(schema, read="postgres")
+    except Exception:
+        return None
+    if len(statements) != 1 or not isinstance(statements[0], exp.Create):
+        return None
+    table = statements[0].this
+    if not isinstance(table, exp.Schema) or not isinstance(table.this, exp.Table):
+        return None
+    table_name = table.this.name
+    columns: list[str] = []
+    for column in table.find_all(exp.ColumnDef):
+        column_type = column.args.get("kind")
+        type_text = column_type.sql() if column_type is not None else ""
+        if column.this.name and type_text:
+            columns.append(f"{column.this.name} {type_text}")
+    if not table_name or not columns:
+        return None
+    return table_name, ", ".join(columns)
+
+
+def _schema_copy_rows(
+    limit: int,
+    variants_per_schema: int,
+    default_limit: int,
+    natural_limit: int,
+) -> tuple[list[dict], Counter[str]]:
     """Create learned schema-to-DDL examples from the prepared NL2SQL corpus.
 
     These records teach the model to copy and preserve real table definitions
@@ -101,9 +138,20 @@ def _schema_copy_rows(limit: int) -> list[dict]:
     """
     source = ROOT_DIR / "data" / "processed" / "nl2sql" / "train.jsonl"
     if not source.exists() or limit <= 0:
-        return []
+        return [], Counter()
     rows: list[dict] = []
+    counts: Counter[str] = Counter()
     seen: set[str] = set()
+    default_names: set[str] = set()
+    schema_count = 0
+    natural_count = 0
+    schema_prompts = [
+        "Create the table defined by the supplied schema context.",
+        "Create this table from the supplied schema definition.",
+        "Generate DDL for the table described by the schema below.",
+        "Implement the supplied table definition in SQL.",
+        "Use the provided schema context to create the requested table.",
+    ]
     with source.open("r", encoding="utf-8") as handle:
         source_rows = handle
         for line in source_rows:
@@ -117,35 +165,96 @@ def _schema_copy_rows(limit: int) -> list[dict]:
             if key in seen:
                 continue
             seen.add(key)
+            schema_count += 1
             target = schema.rstrip(";") + ";"
-            base = {
-                "record_id": _id(schema, target, "schema_copy"),
-                "source_id": "sql_create_context:schema_copy",
-                "source_split": "train",
-                "task_type": "ddl_generation",
-                "dialect": "postgresql",
-                "operation": "CREATE_TABLE_FROM_SCHEMA",
-                "intent": "IN_SCOPE",
-                "question": "Create the table defined by the supplied schema context.",
-                "evidence": "",
-                "schema_context": schema,
-                "target_sql": target,
-                "split_group": "schema_copy",
-                "source": "derived_from_prepared_schema_context",
-                "augmentation": "schema_copy",
-            }
-            rows.append(base)
-            if len(rows) >= limit:
+            table_name = _schema_table_name(schema)
+            for variant_index, template in enumerate(schema_prompts[: max(1, min(5, variants_per_schema))]):
+                question = template.replace("the requested table", table_name)
+                rows.append({
+                    "record_id": _id(question, target, f"schema_copy_{variant_index}"),
+                    "source_id": "prepared_schema_context:schema_copy",
+                    "source_split": "train",
+                    "task_type": "ddl_generation",
+                    "dialect": "postgresql",
+                    "operation": "CREATE_TABLE_FROM_SCHEMA",
+                    "intent": "IN_SCOPE",
+                    "question": question,
+                    "evidence": "",
+                    "schema_context": schema,
+                    "target_sql": target,
+                    "split_group": "schema_copy",
+                    "source": "derived_from_prepared_schema_context",
+                    "augmentation": f"schema_copy_{variant_index}",
+                })
+                counts[f"schema_copy_{variant_index}"] += 1
+
+            natural_description = _schema_natural_description(schema)
+            if natural_description is not None and natural_count < natural_limit:
+                described_name, columns = natural_description
+                natural_prompts = (
+                    f"Create table {described_name} with columns: {columns}.",
+                    f"Define a {described_name} table with these fields: {columns}.",
+                )
+                for variant_index, question in enumerate(natural_prompts):
+                    rows.append({
+                        "record_id": _id(question, target, f"schema_natural_{variant_index}"),
+                        "source_id": "prepared_schema_context:natural_request",
+                        "source_split": "train",
+                        "task_type": "ddl_generation",
+                        "dialect": "postgresql",
+                        "operation": "CREATE_TABLE_FROM_SCHEMA",
+                        "intent": "IN_SCOPE",
+                        "question": question,
+                        "evidence": "",
+                        "schema_context": "",
+                        "target_sql": target,
+                        "split_group": "schema_natural_request",
+                        "source": "derived_from_prepared_schema_context",
+                        "augmentation": f"schema_natural_{variant_index}",
+                    })
+                    counts[f"schema_natural_{variant_index}"] += 1
+                natural_count += 1
+
+            if len(default_names) < default_limit and table_name != "the requested table" and table_name not in default_names:
+                default_names.add(table_name)
+                default_target = f"CREATE TABLE {table_name} (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY);"
+                for variant_index, question in enumerate((
+                    f"Create a table named {table_name}.",
+                    f"Create the {table_name} table with a generated id primary key.",
+                )):
+                    rows.append({
+                        "record_id": _id(question, default_target, f"schema_default_{variant_index}"),
+                        "source_id": "prepared_schema_context:default_convention",
+                        "source_split": "train",
+                        "task_type": "ddl_generation",
+                        "dialect": "postgresql",
+                        "operation": "CREATE_TABLE",
+                        "intent": "IN_SCOPE",
+                        "question": question,
+                        "evidence": "",
+                        "schema_context": "",
+                        "target_sql": default_target,
+                        "split_group": "schema_default_convention",
+                        "source": "derived_from_prepared_schema_table_name",
+                        "augmentation": f"schema_default_{variant_index}",
+                    })
+                    counts[f"schema_default_{variant_index}"] += 1
+            if schema_count >= limit:
                 break
-    return rows
+    return rows, counts
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Prepare augmented DDL training data.")
     parser.add_argument("--schema-examples", type=int, default=3000, help="Unique prepared schema contexts to add to train.")
+    parser.add_argument("--schema-variants", type=int, default=4, help="Natural request phrasings per schema context (1-5).")
+    parser.add_argument("--schema-default-examples", type=int, default=0, help="Distinct schema-derived table names to use for default-id examples.")
+    parser.add_argument("--schema-natural-examples", type=int, default=0, help="Distinct simple schemas to turn into explicit natural table/column requests.")
     parser.add_argument("--core-repeat", type=int, default=1, help="Repeat non-schema DDL instruction rows for balanced supervised training.")
+    parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR, help="Output directory; the raw and held-out source files are never changed.")
     args = parser.parse_args()
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_dir = args.output_dir if args.output_dir.is_absolute() else ROOT_DIR / args.output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
     train_rows: list[dict] = []
     seen: set[tuple[str, str, str]] = set()
     counts: Counter[str] = Counter()
@@ -169,13 +278,18 @@ def main() -> None:
                 train_rows.append(item)
                 counts["default_primary_key_convention"] += 1
 
-    schema_rows = _schema_copy_rows(args.schema_examples)
+    schema_rows, schema_counts = _schema_copy_rows(
+        args.schema_examples,
+        args.schema_variants,
+        args.schema_default_examples,
+        args.schema_natural_examples,
+    )
     for item in schema_rows:
         key = (item["question"].lower(), item["target_sql"].lower(), item["dialect"].lower())
         if key not in seen:
             seen.add(key)
             train_rows.append(item)
-            counts["schema_copy"] += 1
+            counts[item.get("augmentation", "schema_copy")] += 1
 
     # The schema-copy corpus is intentionally broad, but the core DDL
     # instruction set is the behavior we need for requests without schema
@@ -186,7 +300,7 @@ def main() -> None:
         expanded: list[dict] = []
         for item in train_rows:
             expanded.append(item)
-            if item.get("augmentation") == "schema_copy":
+            if str(item.get("source_id", "")).startswith("prepared_schema_context:"):
                 continue
             for repeat_index in range(1, repeat_count):
                 repeated = dict(item)
@@ -194,27 +308,39 @@ def main() -> None:
                 repeated["augmentation"] = f"{item.get('augmentation', 'core')}:repeat_{repeat_index}"
                 expanded.append(repeated)
         train_rows = expanded
-        counts["core_repeated_records"] = len(train_rows) - counts.get("schema_copy", 0)
+        counts["core_repeated_records"] = sum(
+            1 for item in train_rows
+            if not str(item.get("source_id", "")).startswith("prepared_schema_context:")
+        )
 
-    train_path = OUTPUT_DIR / "train.jsonl"
+    # Mix derived schema records and project-labeled instruction records while
+    # keeping generation deterministic.  This prevents a bounded streaming
+    # shuffle in the trainer from seeing one source family first every epoch.
+    random.Random(42).shuffle(train_rows)
+    train_path = output_dir / "train.jsonl"
     train_path.write_text("".join(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n" for row in train_rows), encoding="utf-8")
     for split in ("val", "test"):
         source = SOURCE_DIR / f"{split}.jsonl"
-        destination = OUTPUT_DIR / f"{split}.jsonl"
+        destination = output_dir / f"{split}.jsonl"
         rows = list(read_jsonl(source))
         destination.write_text("".join(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n" for row in rows), encoding="utf-8")
     manifest = {
         "dataset_version": "ddl-instruction-augmented-v1",
         "source_manifest": str(SOURCE_DIR / "manifest.json"),
         "train_records": len(train_rows),
-        "validation_records": sum(1 for _ in read_jsonl(OUTPUT_DIR / "val.jsonl")),
-        "test_records": sum(1 for _ in read_jsonl(OUTPUT_DIR / "test.jsonl")),
+        "validation_records": sum(1 for _ in read_jsonl(output_dir / "val.jsonl")),
+        "test_records": sum(1 for _ in read_jsonl(output_dir / "test.jsonl")),
         "augmentation_counts": dict(counts),
         "schema_examples_requested": args.schema_examples,
+        "schema_variants": max(1, min(5, args.schema_variants)),
+        "schema_default_examples": args.schema_default_examples,
+        "schema_natural_examples": args.schema_natural_examples,
         "core_repeat": repeat_count,
-        "policy": "Targets remain project-labeled DDL; only deterministic request paraphrases and explicit default-primary-key examples are added.",
+        "schema_source_counts": dict(schema_counts),
+        "output_dir": str(output_dir),
+        "policy": "Targets remain project-labeled DDL or exact schema definitions copied from prepared source contexts; derived prompts are marked in source/augmentation fields.",
     }
-    (OUTPUT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    (output_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     print(json.dumps(manifest, indent=2))
 
 

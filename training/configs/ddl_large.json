@@ -1,0 +1,28 @@
+{
+  "model": {
+    "d_model": 192,
+    "n_heads": 6,
+    "n_layers": 6,
+    "d_ff": 768,
+    "max_len": 1024,
+    "dropout": 0.1
+  },
+  "tokenizer": {
+    "kind": "byte_bpe",
+    "vocab_size": 512,
+    "text_limit": 10000,
+    "byte_limit": 500000
+  },
+  "training": {
+    "seed": 42,
+    "batch_size": 1,
+    "grad_accumulation": 1,
+    "learning_rate": 0.0002,
+    "weight_decay": 0.01,
+    "shuffle_buffer": 512,
+    "epochs": 3,
+    "max_steps": 5000,
+    "eval_every": 250,
+    "save_every": 250
+  }
+}

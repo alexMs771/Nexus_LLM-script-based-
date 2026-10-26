@@ -88,14 +88,51 @@ def _encode_row(row: dict, tokenizer, max_len: int, task: str) -> tuple[list[int
 
 
 class JsonlDataset(IterableDataset):
-    def __init__(self, path: Path, tokenizer, max_len: int, task: str, limit: int = 0) -> None:
+    def __init__(
+        self,
+        path: Path,
+        tokenizer,
+        max_len: int,
+        task: str,
+        limit: int = 0,
+        shuffle: bool = False,
+        shuffle_buffer: int = 1024,
+    ) -> None:
         self.path = path
         self.tokenizer = tokenizer
         self.max_len = max_len
         self.task = task
         self.limit = limit
+        self.shuffle = shuffle
+        self.shuffle_buffer = max(1, shuffle_buffer)
 
     def __iter__(self) -> Iterator[tuple[list[int], int]]:
+        if self.shuffle:
+            buffered: list[tuple[list[int], int]] = []
+            yielded = 0
+            with self.path.open("r", encoding="utf-8") as handle:
+                for line in handle:
+                    if not line.strip():
+                        continue
+                    item = _encode_row(json.loads(line), self.tokenizer, self.max_len, self.task)
+                    if item is None:
+                        continue
+                    if len(buffered) < self.shuffle_buffer:
+                        buffered.append(item)
+                        continue
+                    index = random.randrange(len(buffered))
+                    yield buffered.pop(index)
+                    yielded += 1
+                    buffered.append(item)
+                    if self.limit and yielded >= self.limit:
+                        return
+            while buffered:
+                index = random.randrange(len(buffered))
+                yield buffered.pop(index)
+                yielded += 1
+                if self.limit and yielded >= self.limit:
+                    return
+            return
         emitted = 0
         with self.path.open("r", encoding="utf-8") as handle:
             for line in handle:
@@ -340,8 +377,17 @@ def main() -> None:
             history = json.loads((args.out_dir / "training_history.json").read_text(encoding="utf-8")).get("history", []) if (args.out_dir / "training_history.json").exists() else []
             best_val = min((float(item.get("val_loss", float("inf"))) for item in history if item.get("val_loss") is not None), default=float("inf"))
 
-    train_dataset = JsonlDataset(train_path, tokenizer, max_len, args.task, args.limit)
-    val_dataset = JsonlDataset(val_path, tokenizer, max_len, args.task, args.val_limit) if val_count and val_path else None
+    shuffle_buffer = max(1, int(runtime.get("shuffle_buffer", 1024)))
+    train_dataset = JsonlDataset(
+        train_path,
+        tokenizer,
+        max_len,
+        args.task,
+        args.limit,
+        shuffle=args.task in {"ddl"},
+        shuffle_buffer=shuffle_buffer,
+    )
+    val_dataset = JsonlDataset(val_path, tokenizer, max_len, args.task, args.val_limit, shuffle=False, shuffle_buffer=shuffle_buffer) if val_count and val_path else None
     train_loader = DataLoader(train_dataset, batch_size=batch_size, collate_fn=lambda batch: collate(batch, tokenizer.pad_id))
     val_loader = DataLoader(val_dataset, batch_size=batch_size, collate_fn=lambda batch: collate(batch, tokenizer.pad_id)) if val_dataset else None
     grad_accumulation = max(1, int(runtime.get("grad_accumulation", 1)))
