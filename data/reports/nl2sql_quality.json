@@ -1,0 +1,35 @@
+{
+  "dataset_version": "nl2sql-v1",
+  "raw_directory": "D:\\Nexus_LLM\\sql-llm\\data\\raw",
+  "sources": [
+    "sql_create_context",
+    "bird_mini_dev",
+    "spider",
+    "sqale_full",
+    "database_docs",
+    "wikitext103_raw",
+    "sample_databases"
+  ],
+  "records": {
+    "sql_create_context": 78577,
+    "bird_mini_dev": 1500,
+    "spider": 8011,
+    "sqale_full": 511630
+  },
+  "splits": {
+    "train": 479994,
+    "test": 60161,
+    "val": 59563
+  },
+  "rejected": {
+    "spider": 23
+  },
+  "duplicates_removed": 23,
+  "general_text_records": {},
+  "schema_policy": "schema_context is empty when the source does not provide one; no schema is fabricated",
+  "split_policy": "deterministic split by source database/schema group; duplicate removal precedes splitting",
+  "limits": {
+    "limit_per_source": 0,
+    "max_general_records": 0
+  }
+}

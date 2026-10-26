@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 IntentName = Literal[
@@ -126,3 +126,77 @@ class SQLGenerationResponse(BaseModel):
     code: str = "IN_SCOPE"
     request_id: str = ""
     session_id: str | None = None
+
+
+class OwnSQLRequest(BaseModel):
+    """Request for the trained, local NL-to-SQL model only."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    question: str = Field(min_length=1, max_length=12000)
+    schema_context: str = Field(default="", max_length=30000, alias="schema")
+    dialect: Literal["postgresql", "mysql", "sqlite"] = "postgresql"
+    max_new_tokens: int = Field(default=256, ge=8, le=1024)
+    temperature: float = Field(default=0.0, ge=0.0, le=2.0)
+    request_id: str | None = Field(default=None, max_length=100)
+
+
+class OwnSQLResponse(BaseModel):
+    status: Literal["generated", "invalid"]
+    generated_sql: str
+    dialect: Literal["postgresql", "mysql", "sqlite"]
+    validation_status: Literal["valid", "invalid"]
+    warnings: list[str] = Field(default_factory=list)
+    model_id: str
+    model_version: str
+    request_id: str
+    latency_ms: float
+
+
+AssistantModelName = Literal["slm", "ollama"]
+
+
+class AssistantRequest(BaseModel):
+    """Stable conversational contract for the learned DDL assistant."""
+
+    prompt: str = Field(min_length=1, max_length=12000)
+    model: AssistantModelName = "slm"
+    session_id: str | None = Field(default=None, max_length=100, pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$")
+    dialect: DialectName | None = None
+    schema_context: str = Field(default="", max_length=30000, alias="schema")
+    max_new_tokens: int = Field(default=256, ge=8, le=1024)
+    temperature: float = Field(default=0.0, ge=0.0, le=2.0)
+    request_id: str | None = Field(default=None, max_length=100)
+
+
+class AssistantResponseData(BaseModel):
+    status: Literal["accepted", "clarification_required", "rejected", "validation_failed"]
+    code: str
+    intent: IntentName
+    dialect: DialectName
+    sql: str | None = None
+    operation: str | None = None
+    object_names: list[str] = Field(default_factory=list)
+    validation: dict[str, Any] = Field(default_factory=dict)
+    warnings: list[str] = Field(default_factory=list)
+    message: str = ""
+    model: str
+    model_version: str | None = None
+    request_id: str
+    latency_ms: float
+
+
+class AssistantSummary(BaseModel):
+    session_id: str
+    turn: int
+    memory_used: bool
+    remember: str
+    active_objects: list[str] = Field(default_factory=list)
+    previous_prompt: str = ""
+    resolved_prompt: str = ""
+
+
+class AssistantEnvelope(BaseModel):
+    response: AssistantResponseData
+    summary: AssistantSummary
+    model_config = ConfigDict(populate_by_name=True)

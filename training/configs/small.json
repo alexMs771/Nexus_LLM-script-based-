@@ -1,0 +1,24 @@
+{
+  "model": {
+    "d_model": 256,
+    "n_heads": 8,
+    "n_layers": 8,
+    "d_ff": 1024,
+    "max_len": 768,
+    "dropout": 0.1
+  },
+  "tokenizer": {
+    "kind": "byte"
+  },
+  "training": {
+    "seed": 42,
+    "batch_size": 8,
+    "grad_accumulation": 8,
+    "learning_rate": 0.0002,
+    "weight_decay": 0.1,
+    "epochs": 1,
+    "max_steps": 0,
+    "eval_every": 1,
+    "save_every": 500
+  }
+}

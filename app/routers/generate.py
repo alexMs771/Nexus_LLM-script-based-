@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.config import settings
 from app.schemas import (
@@ -18,13 +18,9 @@ from app.services.model_router import model_inventory
 from app.services.request_engine import classify_payload, generate_ddl
 from app.services.session_store import delete_session, get_session
 from app.services.validator import convert_sql, validate_sql
+from app.security import require_api_key
 
-def _auth(x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> None:
-    if settings.api_key and x_api_key != settings.api_key:
-        raise HTTPException(status_code=401, detail="Authentication required.")
-
-
-router = APIRouter(dependencies=[Depends(_auth)])
+router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 @router.post("/api/v1/intent/classify", response_model=IntentResponse)

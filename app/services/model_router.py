@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from app.config import settings
 from app.models.ollama_model import OllamaDDLModel
 from app.models.scratch_model import ScratchSQLModel
+from app.services.learned_sql import get_own_sql_model
 
 
 @lru_cache(maxsize=1)
@@ -54,6 +55,13 @@ def model_inventory() -> list[dict]:
     models = loaded_models()
     return [
         {
+            "id": "own-sql",
+            "provider": "local_pytorch",
+            "available": _own_sql_available(),
+            "version": "own-sql-v1" if _own_sql_available() else "",
+            "details": "Random-initialized decoder-only Transformer trained from the prepared NL-to-SQL corpus; no compiler fallback.",
+        },
+        {
             "id": "scratch",
             "provider": "local_pytorch_hybrid",
             "available": "scratch" in models,
@@ -68,3 +76,11 @@ def model_inventory() -> list[dict]:
             "details": "Local Ollama model selected by default; the configured model must be installed and Ollama must be running.",
         },
     ]
+
+
+def _own_sql_available() -> bool:
+    try:
+        get_own_sql_model()
+        return True
+    except FileNotFoundError:
+        return False

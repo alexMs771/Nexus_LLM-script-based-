@@ -1,0 +1,113 @@
+{
+  "dataset_version": "ddl-v3-complete-sources",
+  "audit_timestamp": "2026-10-23T20:29:00+05:30",
+  "sources": [
+    {
+      "name": "PostgreSQL Sample Databases (neondatabase/postgres-sample-dbs)",
+      "location": "data/raw/sample_databases/postgres-sample-dbs/",
+      "license": "MIT",
+      "databases": ["chinook", "dvdrental", "happiness_index", "lego", "netflix", "pagila", "periodic_table", "titanic", "employees"],
+      "size_mb": 55.7,
+      "status": "downloaded_and_verified",
+      "role": "Real-world production PostgreSQL DDL schemas (tables, PKs, FKs, indexes, constraints, views, domains)"
+    },
+    {
+      "name": "MySQL Sample Databases (Employees, Sakila, Chinook)",
+      "location": "data/raw/sample_databases/mysql/",
+      "license": "GPL / MIT",
+      "databases": ["employees", "employees_partitioned", "sakila_schema", "chinook_mysql", "chinook_mysql_autoincrement"],
+      "size_mb": 1.17,
+      "status": "downloaded_and_verified",
+      "role": "Real-world production MySQL DDL schemas (tables, auto_increment, partitioned tables, foreign keys, views)"
+    },
+    {
+      "name": "SQLite Sample Databases (Northwind, Sakila, Chinook)",
+      "location": "data/raw/sample_databases/sqlite/",
+      "license": "Public Domain / MIT",
+      "databases": ["northwind.db", "northwind_create.sql", "sakila_schema.sql", "chinook.sqlite", "chinook_sqlite.sql"],
+      "size_mb": 25.98,
+      "status": "downloaded_and_verified",
+      "role": "Real-world standalone SQLite database binaries and DDL schemas (tables, triggers, foreign keys)"
+    },
+    {
+      "name": "Official DBML Repository (holistics/dbml)",
+      "location": "data/raw/database_docs/dbml_repository/",
+      "license": "Apache 2.0",
+      "dbml_examples": 371,
+      "total_files": 2300,
+      "size_mb": 54.76,
+      "status": "downloaded_and_verified",
+      "role": "Official DBML grammar, schemas, tests, and cross-dialect translation pairs (db2dbml & dbml2sql)"
+    },
+    {
+      "name": "BIRD Mini-Dev (birdsql/bird_mini_dev)",
+      "location": "data/raw/bird_mini_dev/",
+      "license": "CC BY-SA 4.0",
+      "splits": {"mini_dev_mysql": 500, "mini_dev_pg": 500, "mini_dev_sqlite": 500},
+      "total_records": 1500,
+      "size_mb": 0.69,
+      "status": "downloaded_and_verified",
+      "role": "Cross-dialect schema understanding, domain terminology, and complex natural language requests"
+    },
+    {
+      "name": "Official Database Documentation (PostgreSQL, MySQL, SQLite, DBML)",
+      "location": "data/raw/database_docs/",
+      "license": "PostgreSQL License / Oracle Documentation Terms / SQLite Public Domain / Apache 2.0 (DBML)",
+      "files": 52,
+      "characters": 3127312,
+      "estimated_tokens": 781828,
+      "status": "downloaded_and_normalized",
+      "role": "Primary DDL syntax, types, constraints, indexes, defaults, dialect differences"
+    },
+    {
+      "name": "SQaLe Full Dataset (trl-lab/SQaLe-text-to-SQL-dataset)",
+      "location": "data/raw/sqale_full/",
+      "license": "MIT",
+      "records": 511630,
+      "shards": 33,
+      "size_gb": 3.37,
+      "unique_schemas": 135875,
+      "status": "downloaded_and_verified",
+      "role": "Large-scale real-world schema grounding, multi-table definitions, foreign keys"
+    },
+    {
+      "name": "SQL Create Context (b-mc2/sql-create-context)",
+      "location": "data/raw/sql_create_context/",
+      "license": "CC BY 4.0",
+      "records": 78577,
+      "size_mb": 16.6,
+      "status": "downloaded_and_verified",
+      "role": "Schema understanding, column linking, table terminology, NL interpretation"
+    },
+    {
+      "name": "Spider (xlangai/spider)",
+      "location": "data/raw/spider/",
+      "license": "CC BY-SA 4.0",
+      "records": 8034,
+      "splits": {"train": 7000, "validation": 1034},
+      "size_mb": 5.2,
+      "status": "downloaded_and_verified",
+      "role": "Multi-table schemas, foreign key relationships, evaluation of unseen schemas"
+    },
+    {
+      "name": "CLINC OOS (clinc/clinc_oos)",
+      "location": "data/raw/clinc_oos/",
+      "license": "CC BY 3.0",
+      "records": 23850,
+      "splits": {"train": 15250, "validation": 3100, "test": 5500},
+      "size_mb": 4.1,
+      "status": "downloaded_and_verified",
+      "role": "Auxiliary intent classification baseline and out-of-scope request detection"
+    },
+    {
+      "name": "WikiText-103 (Salesforce/wikitext)",
+      "location": "data/raw/wikitext103_raw/",
+      "license": "CC BY-SA 3.0",
+      "records": 1809468,
+      "estimated_tokens": 140000000,
+      "size_mb": 300.9,
+      "status": "downloaded_and_verified",
+      "role": "Auxiliary English pretraining (optional; keep balanced against database tokens)"
+    }
+  ]
+}

@@ -4,6 +4,8 @@ An auditable, CPU-first research service for English-to-DDL generation. The proj
 
 This is not a general chatbot and it does not execute generated SQL.
 
+The real learned NL-to-SQL service is `POST /generate-sql`. It uses the random-initialized local Transformer trained by `training/train_lm.py`; it does not call Ollama or the phase-1 schema compiler. The older `/api/v1/ddl/generate` route remains as a compatibility path for the existing phase-1 API and is documented separately.
+
 The local `scratch` serving path requires the trained checkpoint. For common natural-language table requests it combines the local checkpoint selection with a deterministic, dialect-aware schema planner and SQL/DBML validation, so requests such as `Create a table employee` can produce safe PostgreSQL DDL by default. The optional `ollama` path is separate and is used only when explicitly selected in an API request.
 
 ## What is implemented
@@ -70,3 +72,5 @@ tests/                regression and safety tests
 ```
 
 See [docs/feasibility.md](docs/feasibility.md), [docs/api.md](docs/api.md), and [docs/deployment.md](docs/deployment.md) for the limits and security assumptions. Customer schemas must not enter the corpus without explicit authorization.
+
+For the full real-model workflow, see [docs/real_llm_build.md](docs/real_llm_build.md).

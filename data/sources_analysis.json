@@ -1,0 +1,165 @@
+{
+  "database_docs": {
+    "postgresql": {
+      "files": 24,
+      "chars": 407720,
+      "estimated_tokens": 101930,
+      "size_kb": 409.4
+    },
+    "mysql": {
+      "files": 8,
+      "chars": 2498005,
+      "estimated_tokens": 624501,
+      "size_kb": 2441.0
+    },
+    "sqlite": {
+      "files": 16,
+      "chars": 191923,
+      "estimated_tokens": 47980,
+      "size_kb": 193.6
+    },
+    "dbml": {
+      "files": 4,
+      "chars": 29664,
+      "estimated_tokens": 7416,
+      "size_kb": 31.0
+    },
+    "total_files": 52,
+    "total_chars": 3127312,
+    "estimated_tokens": 781828
+  },
+  "postgres_sample_dbs": {
+    "databases": [
+      "chinook",
+      "dvdrental",
+      "happiness_index",
+      "lego",
+      "netflix",
+      "pagila",
+      "periodic_table",
+      "titanic",
+      "employees"
+    ],
+    "total_databases": 9,
+    "total_sql_files": 9,
+    "size_mb": 55.7,
+    "status": "ready"
+  },
+  "mysql_sample_dbs": {
+    "databases": [
+      "chinook_mysql",
+      "chinook_mysql_autoincrement",
+      "employees",
+      "employees_partitioned",
+      "sakila_schema"
+    ],
+    "total_sql_files": 5,
+    "size_mb": 1.17,
+    "status": "ready"
+  },
+  "sqlite_sample_dbs": {
+    "databases": [
+      "chinook_sqlite.sql",
+      "northwind_create.sql",
+      "sakila_schema.sql",
+      "northwind.db",
+      "chinook.sqlite"
+    ],
+    "total_database_files": 5,
+    "size_mb": 25.98,
+    "status": "ready"
+  },
+  "dbml_repository": {
+    "total_files": 2300,
+    "dbml_example_files": 371,
+    "size_mb": 54.76,
+    "status": "ready"
+  },
+  "bird_mini_dev": {
+    "splits": {
+      "mini_dev_mysql": 500,
+      "mini_dev_pg": 500,
+      "mini_dev_sqlite": 500
+    },
+    "total_rows": 1500,
+    "dialects": [
+      "mini_dev_mysql",
+      "mini_dev_pg",
+      "mini_dev_sqlite"
+    ],
+    "features": [
+      "question_id",
+      "db_id",
+      "question",
+      "evidence",
+      "SQL",
+      "difficulty"
+    ],
+    "status": "ready"
+  },
+  "sqale_full": {
+    "shards_found": 33,
+    "total_shards_expected": 33,
+    "is_complete": true,
+    "total_rows": 511630,
+    "size_mb": 3452.0,
+    "size_gb": 3.37,
+    "features": [
+      "schema",
+      "question",
+      "query",
+      "token_count",
+      "num_joins",
+      "num_tables",
+      "number_of_columns"
+    ]
+  },
+  "sql_create_context": {
+    "splits": {
+      "train": 78577
+    },
+    "total_rows": 78577,
+    "features": [
+      "answer",
+      "question",
+      "context"
+    ],
+    "estimated_tokens": 2435887,
+    "status": "ready"
+  },
+  "spider": {
+    "splits": {
+      "train": 7000,
+      "validation": 1034
+    },
+    "total_rows": 8034,
+    "features": [
+      "db_id",
+      "query",
+      "question",
+      "query_toks",
+      "query_toks_no_value",
+      "question_toks"
+    ],
+    "status": "ready"
+  },
+  "clinc_oos": {
+    "splits": {
+      "train": 15250,
+      "validation": 3100,
+      "test": 5500
+    },
+    "total_rows": 23850,
+    "features": [
+      "text",
+      "intent"
+    ],
+    "status": "ready"
+  },
+  "wikitext103": {
+    "files": 4,
+    "total_rows": 1809468,
+    "estimated_tokens": 140286449,
+    "size_mb": 300.9
+  }
+}

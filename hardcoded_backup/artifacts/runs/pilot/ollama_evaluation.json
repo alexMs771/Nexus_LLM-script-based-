@@ -1,0 +1,7 @@
+{
+  "model": "qwen2.5-coder:0.5b",
+  "prompt_variant": "common",
+  "cases": [],
+  "status": "blocked",
+  "reason": "Ollama baseline `qwen2.5-coder:0.5b` is unavailable. Start Ollama and pull the model explicitly."
+}

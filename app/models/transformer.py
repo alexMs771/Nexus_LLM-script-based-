@@ -17,7 +17,7 @@ class CausalSelfAttention(nn.Module):
         self.proj = nn.Linear(d_model, d_model)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
         batch, seq_len, d_model = x.shape
         qkv = self.qkv(x).reshape(batch, seq_len, 3, self.n_heads, self.head_dim)
         q, k, v = qkv.unbind(dim=2)
@@ -27,6 +27,10 @@ class CausalSelfAttention(nn.Module):
         scores = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
         mask = torch.triu(torch.ones(seq_len, seq_len, device=x.device, dtype=torch.bool), diagonal=1)
         scores = scores.masked_fill(mask, float("-inf"))
+        if attention_mask is not None:
+            # Mask padded key positions. Query positions are ignored by the
+            # loss, so masking keys is sufficient and keeps generation simple.
+            scores = scores.masked_fill(~attention_mask[:, None, None, :].bool(), float("-inf"))
         weights = torch.softmax(scores, dim=-1)
         weights = self.dropout(weights)
         attended = weights @ v
@@ -56,8 +60,8 @@ class TransformerBlock(nn.Module):
         self.ln2 = nn.LayerNorm(d_model)
         self.ff = FeedForward(d_model, d_ff, dropout)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = x + self.attn(self.ln1(x))
+    def forward(self, x: torch.Tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
+        x = x + self.attn(self.ln1(x), attention_mask)
         x = x + self.ff(self.ln2(x))
         return x
 
@@ -85,7 +89,7 @@ class SQLTransformer(nn.Module):
         self.head = nn.Linear(d_model, vocab_size, bias=False)
         self.head.weight = self.token_embed.weight
 
-    def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
+    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
         seq_len = input_ids.size(1)
         if seq_len > self.max_len:
             raise ValueError(f"Sequence length {seq_len} exceeds max_len {self.max_len}")
@@ -93,7 +97,7 @@ class SQLTransformer(nn.Module):
         x = self.token_embed(input_ids) + self.pos_embed(positions)
         x = self.dropout(x)
         for block in self.blocks:
-            x = block(x)
+            x = block(x, attention_mask)
         x = self.ln_f(x)
         return self.head(x)
 

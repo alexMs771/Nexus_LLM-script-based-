@@ -1,0 +1,19 @@
+{
+  "architecture": "custom_decoder_only_transformer",
+  "d_model": 64,
+  "n_heads": 4,
+  "n_layers": 2,
+  "d_ff": 256,
+  "max_len": 192,
+  "vocab_size": 512,
+  "tokenizer_kind": "byte_bpe",
+  "seed": 42,
+  "random_initialization": true,
+  "dataset_version": "ddl-v2",
+  "dataset_counts": {
+    "train": 78,
+    "val": 15,
+    "test": 11,
+    "rejected": 4
+  }
+}

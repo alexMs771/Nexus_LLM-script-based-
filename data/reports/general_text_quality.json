@@ -1,0 +1,16 @@
+{
+  "dataset_version": "general-text-v1",
+  "raw_directory": "D:\\Nexus_LLM\\sql-llm\\data\\raw",
+  "records": {
+    "database_docs": 388,
+    "wikitext103_raw": 1170381,
+    "sample_databases:postgres-sample-dbs": 9,
+    "sample_databases:mysql-employees-db": 25,
+    "sample_databases:mysql": 5,
+    "sample_databases:sqlite": 3
+  },
+  "limits": {
+    "max_general_records": 0
+  },
+  "policy": "Only source text is copied; no SQL question or answer is invented."
+}

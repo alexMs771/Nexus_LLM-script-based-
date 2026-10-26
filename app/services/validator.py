@@ -113,6 +113,23 @@ def validate_sql(
             destructive = True
             if not allow_destructive:
                 warnings.append("Destructive or restricted SQL detected; execution is disabled by policy.")
+        # sqlglot may return an ``exp.Command`` for malformed or unsupported
+        # SQL instead of raising a parse error.  A Command is not evidence of
+        # valid DDL, so reject it explicitly rather than reporting a false
+        # success for truncated/gibberish model output.
+        if isinstance(statement, exp.Command):
+            return ValidationResult(
+                False,
+                [f"SQL parser could not validate the statement as supported DDL: `{statement.sql()[:160]}`"],
+                sql,
+                explanation,
+                normalized_dialect,
+                types,
+                objects,
+                destructive,
+                False,
+                False,
+            )
         if key not in SUPPORTED_TOP_LEVEL and key not in DESTRUCTIVE_KEYS:
             warnings.append(f"Statement type `{key or 'unknown'}` is outside the DDL service scope.")
 

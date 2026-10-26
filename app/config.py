@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     port: int = 8000
     default_model: str = "ollama"
     scratch_dir: Path = ROOT_DIR / "artifacts" / "scratch"
+    own_model_dir: Path = ROOT_DIR / "artifacts" / "models" / "own-sql-tiny"
+    own_ddl_model_dir: Path = ROOT_DIR / "artifacts" / "models" / "own-ddl"
+    assistant_default_model: str = "slm"
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5-coder:0.5b"
     ollama_timeout_seconds: float = 30.0

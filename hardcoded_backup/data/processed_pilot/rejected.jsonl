@@ -1,0 +1,4 @@
+{"id": "invalid_001", "reason": "invalid expected SQL", "warnings": ["SQL parser rejected the output: Expecting ). Line 1, Col: 24.\n  CREATE TABLE customers \u001b[4m(\u001b[0m"]}
+{"id": "invalid_002", "reason": "invalid expected SQL", "warnings": ["SQL parser rejected the output: Expected table name but got <Token token_type: TokenType.R_PAREN, text: ), line: 1, col: 52, start: 51, end: 51, comments: []>. Line 1, Col: 52.\n  CREATE TABLE orders (customer_id BIGINT REFERENCES \u001b[4m)\u001b[0m;"]}
+{"id": "legacy_0019", "reason": "invalid expected SQL", "warnings": ["No SQL statement was found in the model output."]}
+{"id": "synthetic_table_0011", "reason": "duplicate"}

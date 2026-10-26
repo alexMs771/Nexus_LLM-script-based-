@@ -1,0 +1,195 @@
+{
+  "dataset": "D:\\Nexus_LLM\\sql-llm\\data\\processed\\test.jsonl",
+  "cases": 11,
+  "intent_benchmark": "D:\\Nexus_LLM\\sql-llm\\data\\processed\\intent_test.jsonl",
+  "intent_benchmark_cases": 15,
+  "intent": {
+    "scope_gate": {
+      "accuracy": 1.0,
+      "per_class": {
+        "IN_SCOPE": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "NEEDS_CLARIFICATION": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "UNSUPPORTED_SQL_OPERATION": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "OUT_OF_SCOPE": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "RESTRICTED_OR_DESTRUCTIVE": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "confusion_matrix": {
+        "IN_SCOPE": {
+          "IN_SCOPE": 5,
+          "NEEDS_CLARIFICATION": 0,
+          "UNSUPPORTED_SQL_OPERATION": 0,
+          "OUT_OF_SCOPE": 0,
+          "RESTRICTED_OR_DESTRUCTIVE": 0
+        },
+        "NEEDS_CLARIFICATION": {
+          "IN_SCOPE": 0,
+          "NEEDS_CLARIFICATION": 1,
+          "UNSUPPORTED_SQL_OPERATION": 0,
+          "OUT_OF_SCOPE": 0,
+          "RESTRICTED_OR_DESTRUCTIVE": 0
+        },
+        "UNSUPPORTED_SQL_OPERATION": {
+          "IN_SCOPE": 0,
+          "NEEDS_CLARIFICATION": 0,
+          "UNSUPPORTED_SQL_OPERATION": 3,
+          "OUT_OF_SCOPE": 0,
+          "RESTRICTED_OR_DESTRUCTIVE": 0
+        },
+        "OUT_OF_SCOPE": {
+          "IN_SCOPE": 0,
+          "NEEDS_CLARIFICATION": 0,
+          "UNSUPPORTED_SQL_OPERATION": 0,
+          "OUT_OF_SCOPE": 4,
+          "RESTRICTED_OR_DESTRUCTIVE": 0
+        },
+        "RESTRICTED_OR_DESTRUCTIVE": {
+          "IN_SCOPE": 0,
+          "NEEDS_CLARIFICATION": 0,
+          "UNSUPPORTED_SQL_OPERATION": 0,
+          "OUT_OF_SCOPE": 0,
+          "RESTRICTED_OR_DESTRUCTIVE": 2
+        }
+      },
+      "false_acceptance_rate_out_of_scope": 0.0,
+      "false_rejection_rate_in_scope": 0.0
+    },
+    "independent_classifier": {
+      "accuracy": 0.7333333333333333,
+      "per_class": {
+        "IN_SCOPE": {
+          "precision": 0.75,
+          "recall": 0.6,
+          "f1": 0.6666666666666665
+        },
+        "NEEDS_CLARIFICATION": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "UNSUPPORTED_SQL_OPERATION": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "OUT_OF_SCOPE": {
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571428571428571
+        },
+        "RESTRICTED_OR_DESTRUCTIVE": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "confusion_matrix": {
+        "IN_SCOPE": {
+          "IN_SCOPE": 3,
+          "NEEDS_CLARIFICATION": 2,
+          "UNSUPPORTED_SQL_OPERATION": 0,
+          "OUT_OF_SCOPE": 0,
+          "RESTRICTED_OR_DESTRUCTIVE": 0
+        },
+        "NEEDS_CLARIFICATION": {
+          "IN_SCOPE": 1,
+          "NEEDS_CLARIFICATION": 0,
+          "UNSUPPORTED_SQL_OPERATION": 0,
+          "OUT_OF_SCOPE": 0,
+          "RESTRICTED_OR_DESTRUCTIVE": 0
+        },
+        "UNSUPPORTED_SQL_OPERATION": {
+          "IN_SCOPE": 0,
+          "NEEDS_CLARIFICATION": 0,
+          "UNSUPPORTED_SQL_OPERATION": 3,
+          "OUT_OF_SCOPE": 0,
+          "RESTRICTED_OR_DESTRUCTIVE": 0
+        },
+        "OUT_OF_SCOPE": {
+          "IN_SCOPE": 0,
+          "NEEDS_CLARIFICATION": 1,
+          "UNSUPPORTED_SQL_OPERATION": 0,
+          "OUT_OF_SCOPE": 3,
+          "RESTRICTED_OR_DESTRUCTIVE": 0
+        },
+        "RESTRICTED_OR_DESTRUCTIVE": {
+          "IN_SCOPE": 0,
+          "NEEDS_CLARIFICATION": 0,
+          "UNSUPPORTED_SQL_OPERATION": 0,
+          "OUT_OF_SCOPE": 0,
+          "RESTRICTED_OR_DESTRUCTIVE": 2
+        }
+      },
+      "false_acceptance_rate_out_of_scope": 0.0,
+      "false_rejection_rate_in_scope": 0.4
+    }
+  },
+  "models": [
+    {
+      "model": "scratch",
+      "cases": 4,
+      "syntax_validity": 0.0,
+      "normalized_exact_match": 0.0,
+      "latency_ms_mean": 332.2098250000636,
+      "details": [
+        {
+          "id": "legacy_0022",
+          "syntax_valid": false,
+          "exact_normalized": false,
+          "warnings": [
+            "No SQL statement was found in the model output."
+          ]
+        },
+        {
+          "id": "legacy_0020",
+          "syntax_valid": false,
+          "exact_normalized": false,
+          "warnings": [
+            "No SQL statement was found in the model output."
+          ]
+        },
+        {
+          "id": "legacy_0021",
+          "syntax_valid": false,
+          "exact_normalized": false,
+          "warnings": [
+            "No SQL statement was found in the model output."
+          ]
+        },
+        {
+          "id": "boundary_004",
+          "syntax_valid": false,
+          "exact_normalized": false,
+          "warnings": [
+            "No SQL statement was found in the model output."
+          ]
+        }
+      ]
+    }
+  ],
+  "quality_gates": {
+    "syntax_target": 0.95,
+    "semantic_target": 0.9,
+    "intent_f1_target": 0.95,
+    "execution_enabled": false
+  }
+}
