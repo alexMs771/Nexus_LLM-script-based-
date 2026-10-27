@@ -197,6 +197,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--val-limit", type=int, default=0)
     parser.add_argument("--device", default="auto")
+    parser.add_argument("--init-from", type=Path, default=None, help="Initialize from another encoder-decoder artifact.")
     args = parser.parse_args()
 
     config = json.loads(args.config.read_text(encoding="utf-8"))
@@ -212,7 +213,14 @@ def main() -> None:
         raise SystemExit(f"Missing training or validation file: {train_path} / {val_path}")
 
     tokenizer_path = out_dir / "tokenizer.json"
-    if tokenizer_path.exists():
+    init_dir = None
+    if args.init_from:
+        init_dir = args.init_from if args.init_from.is_absolute() else ROOT_DIR / args.init_from
+        init_tokenizer = init_dir / "tokenizer.json"
+        if not init_tokenizer.exists():
+            raise SystemExit(f"Initial tokenizer not found: {init_tokenizer}")
+        tokenizer = load_tokenizer(init_tokenizer)
+    elif tokenizer_path.exists():
         tokenizer = load_tokenizer(tokenizer_path)
     else:
         kind = str(tokenizer_config.get("kind", "byte"))
@@ -238,6 +246,20 @@ def main() -> None:
     )
     device = torch.device(("cuda" if torch.cuda.is_available() else "cpu") if args.device == "auto" else args.device)
     model.to(device)
+    initialized_from = False
+    if init_dir:
+        init_config_path = init_dir / "config.json"
+        init_weights_path = init_dir / "best.pt"
+        if not init_weights_path.exists():
+            init_weights_path = init_dir / "model.pt"
+        if not init_config_path.exists() or not init_weights_path.exists():
+            raise SystemExit(f"Initial encoder-decoder checkpoint is incomplete: {init_dir}")
+        init_config = json.loads(init_config_path.read_text(encoding="utf-8"))
+        if init_config.get("architecture") != EncoderDecoderTransformer.architecture:
+            raise SystemExit("--init-from must point to a custom_encoder_decoder_transformer artifact.")
+        source_state = torch.load(init_weights_path, map_location=device, weights_only=True)
+        model.load_state_dict(source_state, strict=True)
+        initialized_from = True
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=float(train_config.get("learning_rate", 3e-4)),
@@ -275,6 +297,7 @@ def main() -> None:
         "seed": seed,
         "train_path": str(train_path),
         "validation_path": str(val_path),
+        "initialized_from": str(init_dir) if init_dir else "",
     }
     (out_dir / "config.json").write_text(json.dumps(artifact_config, indent=2), encoding="utf-8")
 
@@ -361,6 +384,7 @@ def main() -> None:
     metadata = {
         **artifact_config,
         "device": str(device),
+        "initialized_from": str(init_dir) if init_dir else "",
         "train_examples_available": train_count,
         "validation_examples_available": val_count,
         "training_seconds": round(time.perf_counter() - started, 3),
