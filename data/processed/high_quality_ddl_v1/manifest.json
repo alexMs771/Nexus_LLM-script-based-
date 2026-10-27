@@ -1,0 +1,78 @@
+{
+  "dataset_version": "high-quality-ddl-v1",
+  "purpose": "Compact high-quality English-to-DDL/DBML training package with explicit out-of-scope detection.",
+  "raw_data_untouched": true,
+  "not_randomly_balanced": true,
+  "active_training": [
+    "supervised/ddl_sql",
+    "supervised/dbml",
+    "out_of_scope"
+  ],
+  "supporting_training": [
+    "sql_support",
+    "dbml",
+    "english"
+  ],
+  "operations_retained": {
+    "CREATE_TABLE": 8378,
+    "DOMAIN_DDL": 1400,
+    "CREATE_TABLE_FROM_SCHEMA": 20000,
+    "MODIFY_DDL": 162,
+    "GENERATE_DDL": 1264,
+    "CREATE_INDEX": 1,
+    "CREATE_VIEW": 1,
+    "CREATE_SCHEMA": 1,
+    "ALTER_TABLE": 4,
+    "SCOPE_GATE": 1
+  },
+  "counts": {
+    "ddl_sql_train": 21476,
+    "dbml_train": 21394,
+    "ddl_sql_test": 1189,
+    "dbml_test": 1183,
+    "ddl_sql_val": 1213,
+    "dbml_val": 1201,
+    "oos_train": 15250,
+    "oos_val": 3099,
+    "oos_test": 5500,
+    "sql_support_spider_train": 6991,
+    "sql_support_spider_val": 1034,
+    "sql_support_sql_create_context_train": 70647,
+    "sql_support_sql_create_context_val": 3970,
+    "sql_support_sql_create_context_test": 3957,
+    "sql_support_sqale_sample_train": 1813,
+    "sql_support_sqale_sample_val": 87,
+    "sql_support_sqale_sample_test": 98,
+    "sql_support_sample_databases_train": 35,
+    "dbml_documents": 77,
+    "english_train": 942345,
+    "english_val": 2026,
+    "english_test": 2274
+  },
+  "excluded_large_sources": [
+    "full SQaLe copy; retained in raw and legacy archive"
+  ],
+  "legacy_archive": "data/old_data/processed_legacy_2026-10-26.zip",
+  "default_output_format": "dbml",
+  "recommended_architecture": "custom_encoder_decoder_transformer",
+  "recommended_training_files": {
+    "sql_ddl_generator": {
+      "train": "supervised/ddl_sql/train.jsonl",
+      "validation": "supervised/ddl_sql/val.jsonl",
+      "test": "supervised/ddl_sql/test.jsonl"
+    },
+    "dbml_generator": {
+      "train": "supervised/dbml/train.jsonl",
+      "validation": "supervised/dbml/val.jsonl",
+      "test": "supervised/dbml/test.jsonl"
+    },
+    "out_of_scope_policy": {
+      "train": "out_of_scope/train.jsonl",
+      "validation": "out_of_scope/val.jsonl",
+      "test": "out_of_scope/test.jsonl"
+    }
+  },
+  "training_contract": "Train SQL and DBML as separate encoder-decoder artifacts. Keep out_of_scope separate from generator targets and apply it in the scope/policy stage.",
+  "split_policy": "Original val/test rows preserved; original train rows deterministically assigned 90/5/5 by schema-context plus request hash (or request/group fallback). No random balancing.",
+  "sql_output_policy": "Use SQL output for operational ALTER/DROP/INDEX/VIEW/SCHEMA commands; use DBML for declarative schema generation."
+}

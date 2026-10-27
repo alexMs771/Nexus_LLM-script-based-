@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     scratch_dir: Path = ROOT_DIR / "artifacts" / "scratch"
     own_model_dir: Path = ROOT_DIR / "artifacts" / "models" / "own-sql-tiny"
     own_ddl_model_dir: Path = ROOT_DIR / "artifacts" / "models" / "own-ddl"
+    own_ddl_encoder_decoder_dir: Path = ROOT_DIR / "artifacts" / "models" / "own-ddl-encoder-decoder-v1"
     assistant_default_model: str = "slm"
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5-coder:0.5b"

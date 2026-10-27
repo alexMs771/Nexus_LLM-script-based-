@@ -29,6 +29,8 @@ data/processed/*
 !data/processed/.gitkeep
 data/raw/*
 !data/raw/.gitkeep
+data/old_data/*
+old_data/*
 data/derived/*
 data/intermediate/*
 backups/*

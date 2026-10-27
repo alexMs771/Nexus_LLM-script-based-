@@ -11,6 +11,7 @@ from app.models.ollama_model import OllamaDDLModel, OllamaUnavailable
 from app.schemas import AssistantEnvelope, AssistantRequest, AssistantResponseData, AssistantSummary
 from app.security import require_api_key
 from app.services.learned_ddl import get_own_ddl_model
+from app.services.learned_ddl import get_own_ddl_artifact_dir
 from app.services.scope_gate import classify_request
 from app.services.session_store import record_turn, resolve_followup
 from app.services.validator import validate_sql
@@ -115,7 +116,10 @@ def generate_assistant(payload: AssistantRequest) -> AssistantEnvelope:
             try:
                 model = get_own_ddl_model()
             except FileNotFoundError as exc:
-                raise HTTPException(status_code=503, detail="The own DDL SLM is not trained yet. Run training.prepare_ddl and training.train_lm with --task ddl.") from exc
+                raise HTTPException(
+                    status_code=503,
+                    detail="The own DDL SLM is not trained yet. Run training.train_seq2seq with the high_quality_ddl_v1 SQL train/validation files.",
+                ) from exc
             raw = model.generate(prompt, max_new_tokens=payload.max_new_tokens, temperature=payload.temperature)
             version = model.version or "own-ddl-unversioned"
         else:
@@ -172,5 +176,5 @@ def assistant_model_info() -> dict[str, object]:
     try:
         model = get_own_ddl_model()
     except FileNotFoundError:
-        return {"id": "slm", "provider": "local_pytorch", "available": False, "artifact_dir": str(settings.own_ddl_model_dir)}
-    return {"id": "slm", "provider": "local_pytorch", "available": True, "version": model.version, "artifact_dir": str(settings.own_ddl_model_dir)}
+        return {"id": "slm", "provider": "local_pytorch", "available": False, "artifact_dir": str(get_own_ddl_artifact_dir())}
+    return {"id": "slm", "provider": "local_pytorch", "available": True, "version": model.version, "artifact_dir": str(get_own_ddl_artifact_dir())}

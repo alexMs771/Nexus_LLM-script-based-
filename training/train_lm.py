@@ -32,6 +32,29 @@ def set_seed(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
+def _prompt_and_target(row: dict, task: str) -> tuple[str, str]:
+    """Read either the compact prompt/answer contract or legacy task fields."""
+    compact_prompt = str(row.get("prompt", "")).strip()
+    compact_answer = str(row.get("answer", "")).strip()
+    if compact_prompt and compact_answer:
+        return compact_prompt, compact_answer
+    if task == "ddl":
+        prompt = build_ddl_prompt(
+            requirement=str(row.get("question", "")),
+            dialect=str(row.get("dialect", "postgresql")),
+            task=str(row.get("operation", "generate_ddl")),
+            schema=str(row.get("schema_context", "")),
+        )
+        return prompt, str(row.get("target_sql", "")).strip()
+    prompt = build_sql_prompt(
+        question=str(row.get("question", "")),
+        schema=str(row.get("schema_context", "")),
+        dialect=str(row.get("dialect", "postgresql")),
+        evidence=str(row.get("evidence", "")),
+    )
+    return prompt, str(row.get("target_sql", "")).strip()
+
+
 def count_jsonl(path: Path, limit: int = 0) -> int:
     count = 0
     with path.open("r", encoding="utf-8") as handle:
@@ -45,24 +68,9 @@ def count_jsonl(path: Path, limit: int = 0) -> int:
 
 def _encode_row(row: dict, tokenizer, max_len: int, task: str) -> tuple[list[int], int] | None:
     if task in {"nl2sql", "ddl"}:
-        question = str(row.get("question", "")).strip()
-        target = str(row.get("target_sql", "")).strip()
-        if not question or not target:
+        prompt, target = _prompt_and_target(row, task)
+        if not prompt or not target:
             return None
-        if task == "ddl":
-            prompt = build_ddl_prompt(
-                requirement=question,
-                dialect=str(row.get("dialect", "postgresql")),
-                task=str(row.get("operation", "generate_ddl")),
-                schema=str(row.get("schema_context", "")),
-            )
-        else:
-            prompt = build_sql_prompt(
-                question=question,
-                schema=str(row.get("schema_context", "")),
-                dialect=str(row.get("dialect", "postgresql")),
-                evidence=str(row.get("evidence", "")),
-            )
         prompt_ids = tokenizer.encode(prompt, add_special=False)
         target_ids = tokenizer.encode(target, add_special=False) + [tokenizer.eos_id]
         target_ids = target_ids[: max(1, max_len - 2)]
@@ -271,9 +279,11 @@ def main() -> None:
                     continue
                 row = json.loads(line)
                 if args.task == "ddl":
-                    text_for_tokenizer = build_ddl_prompt(str(row.get("question", "")), str(row.get("dialect", "postgresql")), str(row.get("operation", "generate_ddl")), str(row.get("schema_context", ""))) + str(row.get("target_sql", ""))
+                    prompt_text, target_text = _prompt_and_target(row, "ddl")
+                    text_for_tokenizer = prompt_text + target_text
                 elif args.task == "nl2sql":
-                    text_for_tokenizer = build_sql_prompt(str(row.get("question", "")), str(row.get("schema_context", "")), str(row.get("dialect", "postgresql")), str(row.get("evidence", ""))) + str(row.get("target_sql", ""))
+                    prompt_text, target_text = _prompt_and_target(row, "nl2sql")
+                    text_for_tokenizer = prompt_text + target_text
                 else:
                     text_for_tokenizer = str(row.get("text", ""))
                 encoded_length = len(text_for_tokenizer.encode("utf-8"))

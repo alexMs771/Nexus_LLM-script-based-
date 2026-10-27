@@ -20,6 +20,24 @@ from training.sql_format import build_ddl_prompt
 READ_DIALECT = {"postgresql": "postgres", "mysql": "mysql", "sqlite": "sqlite"}
 
 
+def _compact_fields(row: dict) -> tuple[str, str, str, str]:
+    """Return prompt, expected output, dialect, and operation for both formats."""
+    compact_prompt = str(row.get("prompt", "")).strip()
+    compact_answer = str(row.get("answer", "")).strip()
+    if compact_prompt and compact_answer:
+        dialect_match = re.search(r"<\|dialect\|>\s*\n([^\n]+)", compact_prompt, flags=re.I)
+        task_match = re.search(r"<\|task\|>\s*\n([^\n]+)", compact_prompt, flags=re.I)
+        return (
+            compact_prompt,
+            compact_answer,
+            (dialect_match.group(1).strip() if dialect_match else "postgresql"),
+            (task_match.group(1).strip() if task_match else "unknown"),
+        )
+    dialect = str(row.get("dialect") or "postgresql")
+    prompt = build_ddl_prompt(row.get("question", ""), dialect, row.get("operation", "generate_ddl"), row.get("schema_context", ""))
+    return prompt, str(row.get("target_sql", "")), dialect, str(row.get("operation", "unknown"))
+
+
 def _normal(value: str, dialect: str) -> str:
     cleaned = re.sub(r"^```(?:sql)?\s*|\s*```$", "", value.strip(), flags=re.I | re.S).rstrip(";").strip()
     try:
@@ -52,8 +70,7 @@ def main() -> None:
             if not line.strip():
                 continue
             row = json.loads(line)
-            dialect = str(row.get("dialect") or "postgresql")
-            prompt = build_ddl_prompt(row.get("question", ""), dialect, row.get("operation", "generate_ddl"), row.get("schema_context", ""))
+            prompt, expected_sql, dialect, operation = _compact_fields(row)
             candidates: list[tuple[str, object]] = []
             for candidate_index in range(max(1, args.candidates)):
                 # A deterministic seed makes repeated evaluation comparable,
@@ -79,9 +96,8 @@ def main() -> None:
                 ((candidate, candidate_result) for candidate, candidate_result in candidates if candidate_result.valid_syntax and candidate_result.policy_allowed),
                 candidates[0],
             )
-            operation = str(row.get("operation", "unknown"))
             is_syntax = bool(result.valid_syntax and result.policy_allowed)
-            is_exact = _normal(generated, dialect) == _normal(str(row.get("target_sql", "")), dialect)
+            is_exact = _normal(generated, dialect) == _normal(expected_sql, dialect)
             total += 1
             syntax += int(is_syntax)
             exact += int(is_exact)
@@ -89,7 +105,7 @@ def main() -> None:
             by_operation[operation]["syntax_valid"] += int(is_syntax)
             by_operation[operation]["exact_match"] += int(is_exact)
             if len(failures) < 20 and (not is_syntax or not is_exact):
-                failures.append({"question": row.get("question", ""), "expected_sql": row.get("target_sql", ""), "generated_sql": generated, "warnings": result.warnings, "candidate_count": len(candidates)})
+                failures.append({"question": row.get("question", row.get("prompt", "")), "expected_sql": expected_sql, "generated_sql": generated, "warnings": result.warnings, "candidate_count": len(candidates)})
             if args.limit and total >= args.limit:
                 break
     report = {
